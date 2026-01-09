@@ -308,10 +308,32 @@ class TagGeneratorSettingTab extends PluginSettingTab {
                 dropdown.addOption('gpt-4o', 'GPT-4o (Optimized)');
                 dropdown.addOption('gpt-4o-mini', 'GPT-4o Mini');
 
+                // GPT-4.1 Models
+                dropdown.addOption('gpt-4.1', 'GPT-4.1');
+                dropdown.addOption('gpt-4.1-mini', 'GPT-4.1 Mini');
+                dropdown.addOption('gpt-4.1-nano', 'GPT-4.1 Nano');
+
+                // GPT-5 Models
+                dropdown.addOption('gpt-5', 'GPT-5');
+                dropdown.addOption('gpt-5.1', 'GPT-5.1');
+                dropdown.addOption('gpt-5.2', 'GPT-5.2');
+                dropdown.addOption('gpt-5-mini', 'GPT-5 Mini');
+                dropdown.addOption('gpt-5-nano', 'GPT-5 Nano');
+                dropdown.addOption('gpt-5-pro', 'GPT-5 Pro');
+                dropdown.addOption('gpt-5.2-pro', 'GPT-5.2 Pro');
+
                 // o1 Models (Reasoning)
                 dropdown.addOption('o1', 'o1 (Advanced Reasoning)');
                 dropdown.addOption('o1-preview', 'o1 Preview');
                 dropdown.addOption('o1-mini', 'o1 Mini');
+                dropdown.addOption('o1-pro', 'o1 Pro');
+
+                // o3 Models
+                dropdown.addOption('o3', 'o3');
+                dropdown.addOption('o3-pro', 'o3 Pro');
+
+                // o4 Models
+                dropdown.addOption('o4-mini', 'o4 Mini');
 
                 dropdown.setValue(this.plugin.settings.model)
                     .onChange(async (value) => {

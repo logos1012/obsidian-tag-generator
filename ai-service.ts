@@ -37,10 +37,12 @@ ${noteContent.substring(0, 500)}
 
 JSON 배열 형식으로만 응답하세요. 예: ["태그1", "태그2", "태그3"]`;
 
-            // o1 models don't support system messages or temperature
-            const isO1Model = this.settings.model.startsWith('o1');
+            // o1, o3, o4 models don't support system messages or temperature
+            const isReasoningModel = this.settings.model.startsWith('o1') ||
+                                     this.settings.model.startsWith('o3') ||
+                                     this.settings.model.startsWith('o4');
 
-            const messages = isO1Model ? [
+            const messages = isReasoningModel ? [
                 {
                     role: 'user',
                     content: `You are a helpful assistant that refines and improves tags for documents. Always respond with a JSON array of refined tags.\n\n${prompt}`
@@ -62,8 +64,8 @@ JSON 배열 형식으로만 응답하세요. 예: ["태그1", "태그2", "태그
                 max_tokens: 200
             };
 
-            // Only add temperature for non-o1 models
-            if (!isO1Model) {
+            // Only add temperature for non-reasoning models
+            if (!isReasoningModel) {
                 requestBody.temperature = 0.3;
             }
 
