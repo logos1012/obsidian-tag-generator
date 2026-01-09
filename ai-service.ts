@@ -128,6 +128,8 @@ JSON 배열 형식으로만 응답하세요. 예: ["태그1", "태그2", "태그
 
     private async callResponsesAPI(prompt: string): Promise<string[]> {
         try {
+            console.log('Calling responses API with model:', this.settings.model);
+
             const response = await fetch('https://api.openai.com/v1/responses', {
                 method: 'POST',
                 headers: {
@@ -143,10 +145,12 @@ JSON 배열 형식으로만 응답하세요. 예: ["태그1", "태그2", "태그
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 const errorMessage = errorData.error?.message || response.statusText || 'Unknown error';
+                console.error('Responses API error:', response.status, errorMessage);
                 throw new Error(`Responses API error: ${errorMessage}`);
             }
 
             const data = await response.json();
+            console.log('Responses API raw response:', JSON.stringify(data).substring(0, 500));
 
             // Extract content from responses API format
             let content = '';
@@ -161,6 +165,17 @@ JSON 배열 형식으로만 응답하세요. 예: ["태그1", "태그2", "태그
                 }
             } else if (typeof data.output === 'string') {
                 content = data.output;
+            } else if (data.choices && Array.isArray(data.choices)) {
+                // Handle if API returns in chat completions format
+                content = data.choices[0]?.message?.content || '';
+            }
+
+            console.log('Extracted content:', content);
+
+            // Check if content is empty
+            if (!content || content.trim() === '') {
+                console.warn('Empty response from responses API, returning original tags');
+                return [];
             }
 
             // Parse JSON response
@@ -171,10 +186,26 @@ JSON 배열 형식으로만 응답하세요. 예: ["태그1", "태그2", "태그
                 }
             } catch (parseError) {
                 console.error('Failed to parse responses API output:', parseError);
+                console.error('Content that failed to parse:', content);
+
                 // Try to extract tags from the response even if it's not valid JSON
                 const matches = content.match(/"([^"]+)"/g);
                 if (matches) {
-                    return matches.map(m => m.replace(/"/g, '')).filter(tag => tag.length > 0);
+                    const extractedTags = matches.map(m => m.replace(/"/g, '')).filter(tag => tag.length > 0);
+                    console.log('Extracted tags from malformed JSON:', extractedTags);
+                    return extractedTags;
+                }
+
+                // Try to extract array content between brackets
+                const arrayMatch = content.match(/\[(.*?)\]/s);
+                if (arrayMatch) {
+                    const arrayContent = arrayMatch[1];
+                    const tagMatches = arrayContent.match(/["']([^"']+)["']/g);
+                    if (tagMatches) {
+                        const extractedTags = tagMatches.map(m => m.replace(/["']/g, '')).filter(tag => tag.length > 0);
+                        console.log('Extracted tags from array content:', extractedTags);
+                        return extractedTags;
+                    }
                 }
             }
 

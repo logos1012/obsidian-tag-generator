@@ -98,7 +98,18 @@ export default class TagGeneratorPlugin extends Plugin {
             // Use AI to refine tags if enabled
             if (this.settings.useAI && this.settings.openaiApiKey) {
                 new Notice('Refining tags with AI...');
-                tags = await this.aiService.refineTags(tags, bodyText);
+                try {
+                    const refinedTags = await this.aiService.refineTags(tags, bodyText);
+                    // Only use refined tags if we got valid results
+                    if (refinedTags && refinedTags.length > 0) {
+                        tags = refinedTags;
+                    } else {
+                        console.log('AI returned empty tags, using original tags');
+                    }
+                } catch (error) {
+                    console.error('AI refinement failed, using original tags:', error);
+                    new Notice('AI refinement failed, using original tags');
+                }
             }
 
             if (tags.length === 0) {
