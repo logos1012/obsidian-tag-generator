@@ -5,6 +5,11 @@ An Obsidian plugin that automatically generates tags from your notes and adds th
 ## Features
 
 - **Automatic Tag Generation**: Analyzes your note content and generates relevant tags
+- **AI-Powered Tag Refinement** (v1.1.0+):
+  - Uses OpenAI to refine and improve generated tags
+  - Removes irrelevant words like "있었다", "이렇게", "거다"
+  - Converts words to their base forms
+  - Ensures only meaningful tags are included
 - **Smart Keyword Extraction**:
   - Extracts proper nouns, acronyms, and important terms
   - Handles both Korean and English text
@@ -19,6 +24,7 @@ An Obsidian plugin that automatically generates tags from your notes and adds th
   - Maximum number of tags per note
   - Minimum word length for tags
   - Exclude specific folders from processing
+  - AI model selection (GPT-3.5 Turbo, GPT-4, GPT-4 Turbo)
 
 ## Installation
 
@@ -46,6 +52,12 @@ An Obsidian plugin that automatically generates tags from your notes and adds th
 
 ## Settings
 
+### AI Settings
+- **Use AI for tag refinement**: Enable OpenAI integration for better tag quality
+- **OpenAI API Key**: Your OpenAI API key (required for AI features)
+- **AI Model**: Choose between GPT-3.5 Turbo, GPT-4, or GPT-4 Turbo
+
+### General Settings
 - **Maximum number of tags**: How many tags to generate per note (default: 10)
 - **Overwrite existing tags**: Replace existing tags or merge with them (default: false)
 - **Minimum word length**: Minimum character length for tag candidates (default: 2)

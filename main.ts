@@ -1,27 +1,40 @@
 import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, TFile } from 'obsidian';
 import { KeywordExtractor } from './keyword-extractor';
+import { AIService } from './ai-service';
 
 interface TagGeneratorSettings {
     maxTags: number;
     overwriteExistingTags: boolean;
     excludeFolders: string[];
     minWordLength: number;
+    useAI: boolean;
+    openaiApiKey: string;
+    model: string;
 }
 
 const DEFAULT_SETTINGS: TagGeneratorSettings = {
     maxTags: 10,
     overwriteExistingTags: false,
     excludeFolders: [],
-    minWordLength: 2
+    minWordLength: 2,
+    useAI: false,
+    openaiApiKey: '',
+    model: 'gpt-3.5-turbo'
 };
 
 export default class TagGeneratorPlugin extends Plugin {
     settings: TagGeneratorSettings;
     keywordExtractor: KeywordExtractor;
+    aiService: AIService;
 
     async onload() {
         await this.loadSettings();
         this.keywordExtractor = new KeywordExtractor(this.settings.maxTags);
+        this.aiService = new AIService({
+            openaiApiKey: this.settings.openaiApiKey,
+            model: this.settings.model,
+            useAI: this.settings.useAI
+        });
 
         // Add ribbon icon
         this.addRibbonIcon('tag', 'Generate Tags', () => {
@@ -80,7 +93,13 @@ export default class TagGeneratorPlugin extends Plugin {
             const bodyText = this.extractBodyText(content);
 
             // Generate tags
-            const tags = this.keywordExtractor.extractKeywords(bodyText, title);
+            let tags = this.keywordExtractor.extractKeywords(bodyText, title);
+
+            // Use AI to refine tags if enabled
+            if (this.settings.useAI && this.settings.openaiApiKey) {
+                new Notice('Refining tags with AI...');
+                tags = await this.aiService.refineTags(tags, bodyText);
+            }
 
             if (tags.length === 0) {
                 new Notice('No tags generated for this note');
@@ -225,6 +244,12 @@ export default class TagGeneratorPlugin extends Plugin {
         await this.saveData(this.settings);
         // Update keyword extractor with new settings
         this.keywordExtractor = new KeywordExtractor(this.settings.maxTags);
+        // Update AI service settings
+        this.aiService.updateSettings({
+            openaiApiKey: this.settings.openaiApiKey,
+            model: this.settings.model,
+            useAI: this.settings.useAI
+        });
     }
 }
 
@@ -242,6 +267,47 @@ class TagGeneratorSettingTab extends PluginSettingTab {
         containerEl.empty();
 
         containerEl.createEl('h2', {text: 'Tag Generator Settings'});
+
+        containerEl.createEl('h3', {text: 'AI Settings'});
+
+        new Setting(containerEl)
+            .setName('Use AI for tag refinement')
+            .setDesc('Use OpenAI to refine and improve generated tags')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.useAI)
+                .onChange(async (value) => {
+                    this.plugin.settings.useAI = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName('OpenAI API Key')
+            .setDesc('Enter your OpenAI API key for AI refinement')
+            .addText(text => text
+                .setPlaceholder('sk-...')
+                .setValue(this.plugin.settings.openaiApiKey)
+                .onChange(async (value) => {
+                    this.plugin.settings.openaiApiKey = value;
+                    await this.plugin.saveSettings();
+                }))
+            .then(setting => {
+                setting.controlEl.querySelector('input')?.setAttribute('type', 'password');
+            });
+
+        new Setting(containerEl)
+            .setName('AI Model')
+            .setDesc('Select the OpenAI model to use')
+            .addDropdown(dropdown => dropdown
+                .addOption('gpt-3.5-turbo', 'GPT-3.5 Turbo (Faster, Cheaper)')
+                .addOption('gpt-4', 'GPT-4 (Better quality)')
+                .addOption('gpt-4-turbo-preview', 'GPT-4 Turbo (Best quality)')
+                .setValue(this.plugin.settings.model)
+                .onChange(async (value) => {
+                    this.plugin.settings.model = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        containerEl.createEl('h3', {text: 'General Settings'});
 
         new Setting(containerEl)
             .setName('Maximum number of tags')
@@ -303,5 +369,8 @@ class TagGeneratorSettingTab extends PluginSettingTab {
         list.createEl('li', {text: 'Proper nouns and acronyms'});
         list.createEl('li', {text: 'Important keywords from content'});
         list.createEl('li', {text: 'Numbers, dates, and amounts'});
+        if (this.plugin.settings.useAI) {
+            list.createEl('li', {text: '🤖 AI refinement to remove irrelevant words and improve quality'});
+        }
     }
 }
