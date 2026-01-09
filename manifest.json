@@ -1,7 +1,7 @@
 {
   "id": "tag-generator",
   "name": "Tag Generator",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "minAppVersion": "0.15.0",
   "description": "Automatically generate tags from your notes and add them to frontmatter",
   "author": "Jake",

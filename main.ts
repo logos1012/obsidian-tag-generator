@@ -19,7 +19,7 @@ const DEFAULT_SETTINGS: TagGeneratorSettings = {
     minWordLength: 2,
     useAI: false,
     openaiApiKey: '',
-    model: 'gpt-3.5-turbo'
+    model: 'gpt-4o-mini'  // Changed to a commonly available model
 };
 
 export default class TagGeneratorPlugin extends Plugin {

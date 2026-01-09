@@ -15,6 +15,10 @@ export class AIService {
         this.settings = settings;
     }
 
+    private isResponsesAPIModel(model: string): boolean {
+        return model.startsWith('gpt-5') || model.startsWith('gpt-4.1') || model.startsWith('o3') || model.startsWith('o4');
+    }
+
     async refineTags(tags: string[], noteContent: string): Promise<string[]> {
         if (!this.settings.useAI || !this.settings.openaiApiKey) {
             return tags;
@@ -37,12 +41,15 @@ ${noteContent.substring(0, 500)}
 
 JSON 배열 형식으로만 응답하세요. 예: ["태그1", "태그2", "태그3"]`;
 
-            // o1, o3, o4 models don't support system messages or temperature
-            const isReasoningModel = this.settings.model.startsWith('o1') ||
-                                     this.settings.model.startsWith('o3') ||
-                                     this.settings.model.startsWith('o4');
+            // Check if this model uses the new responses API
+            if (this.isResponsesAPIModel(this.settings.model)) {
+                return await this.callResponsesAPI(prompt);
+            }
 
-            const messages = isReasoningModel ? [
+            // o1 models don't support system messages or temperature (but use chat completions API)
+            const isO1Model = this.settings.model.startsWith('o1');
+
+            const messages = isO1Model ? [
                 {
                     role: 'user',
                     content: `You are a helpful assistant that refines and improves tags for documents. Always respond with a JSON array of refined tags.\n\n${prompt}`
@@ -64,8 +71,8 @@ JSON 배열 형식으로만 응답하세요. 예: ["태그1", "태그2", "태그
                 max_tokens: 200
             };
 
-            // Only add temperature for non-reasoning models
-            if (!isReasoningModel) {
+            // Only add temperature for non-o1 models
+            if (!isO1Model) {
                 requestBody.temperature = 0.3;
             }
 
@@ -79,7 +86,19 @@ JSON 배열 형식으로만 응답하세요. 예: ["태그1", "태그2", "태그
             });
 
             if (!response.ok) {
-                throw new Error(`OpenAI API error: ${response.statusText}`);
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.error?.message || response.statusText || 'Unknown error';
+
+                // Check for specific error types
+                if (response.status === 404 || errorMessage.includes('model')) {
+                    throw new Error(`Model "${this.settings.model}" is not available. Please select a different model in settings.`);
+                } else if (response.status === 401) {
+                    throw new Error('Invalid API key. Please check your OpenAI API key in settings.');
+                } else if (response.status === 429) {
+                    throw new Error('Rate limit exceeded. Please try again later.');
+                } else {
+                    throw new Error(`OpenAI API error: ${errorMessage}`);
+                }
             }
 
             const data = await response.json();
@@ -104,6 +123,65 @@ JSON 배열 형식으로만 응답하세요. 예: ["태그1", "태그2", "태그
         } catch (error) {
             console.error('AI refinement error:', error);
             return tags; // Return original tags on error
+        }
+    }
+
+    private async callResponsesAPI(prompt: string): Promise<string[]> {
+        try {
+            const response = await fetch('https://api.openai.com/v1/responses', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.settings.openaiApiKey}`
+                },
+                body: JSON.stringify({
+                    model: this.settings.model,
+                    input: prompt
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.error?.message || response.statusText || 'Unknown error';
+                throw new Error(`Responses API error: ${errorMessage}`);
+            }
+
+            const data = await response.json();
+
+            // Extract content from responses API format
+            let content = '';
+            if (data.output && Array.isArray(data.output)) {
+                for (const item of data.output) {
+                    if (item.type === 'message' && item.content) {
+                        const messageContent = Array.isArray(item.content)
+                            ? item.content.find(c => c.type === 'text')?.text || ''
+                            : item.content;
+                        content += messageContent;
+                    }
+                }
+            } else if (typeof data.output === 'string') {
+                content = data.output;
+            }
+
+            // Parse JSON response
+            try {
+                const refinedTags = JSON.parse(content);
+                if (Array.isArray(refinedTags)) {
+                    return refinedTags.filter(tag => typeof tag === 'string' && tag.length > 0);
+                }
+            } catch (parseError) {
+                console.error('Failed to parse responses API output:', parseError);
+                // Try to extract tags from the response even if it's not valid JSON
+                const matches = content.match(/"([^"]+)"/g);
+                if (matches) {
+                    return matches.map(m => m.replace(/"/g, '')).filter(tag => tag.length > 0);
+                }
+            }
+
+            return [];
+        } catch (error) {
+            console.error('Responses API error:', error);
+            throw error;
         }
     }
 }
