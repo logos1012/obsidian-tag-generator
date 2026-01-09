@@ -37,27 +37,43 @@ ${noteContent.substring(0, 500)}
 
 JSON 배열 형식으로만 응답하세요. 예: ["태그1", "태그2", "태그3"]`;
 
+            // o1 models don't support system messages or temperature
+            const isO1Model = this.settings.model.startsWith('o1');
+
+            const messages = isO1Model ? [
+                {
+                    role: 'user',
+                    content: `You are a helpful assistant that refines and improves tags for documents. Always respond with a JSON array of refined tags.\n\n${prompt}`
+                }
+            ] : [
+                {
+                    role: 'system',
+                    content: 'You are a helpful assistant that refines and improves tags for documents. Always respond with a JSON array of refined tags.'
+                },
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ];
+
+            const requestBody: any = {
+                model: this.settings.model,
+                messages: messages,
+                max_tokens: 200
+            };
+
+            // Only add temperature for non-o1 models
+            if (!isO1Model) {
+                requestBody.temperature = 0.3;
+            }
+
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${this.settings.openaiApiKey}`
                 },
-                body: JSON.stringify({
-                    model: this.settings.model,
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'You are a helpful assistant that refines and improves tags for documents. Always respond with a JSON array of refined tags.'
-                        },
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ],
-                    temperature: 0.3,
-                    max_tokens: 200
-                })
+                body: JSON.stringify(requestBody)
             });
 
             if (!response.ok) {

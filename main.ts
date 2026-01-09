@@ -297,15 +297,29 @@ class TagGeneratorSettingTab extends PluginSettingTab {
         new Setting(containerEl)
             .setName('AI Model')
             .setDesc('Select the OpenAI model to use')
-            .addDropdown(dropdown => dropdown
-                .addOption('gpt-3.5-turbo', 'GPT-3.5 Turbo (Faster, Cheaper)')
-                .addOption('gpt-4', 'GPT-4 (Better quality)')
-                .addOption('gpt-4-turbo-preview', 'GPT-4 Turbo (Best quality)')
-                .setValue(this.plugin.settings.model)
-                .onChange(async (value) => {
-                    this.plugin.settings.model = value;
-                    await this.plugin.saveSettings();
-                }));
+            .addDropdown(dropdown => {
+                // GPT-3.5 Models
+                dropdown.addOption('gpt-3.5-turbo', 'GPT-3.5 Turbo');
+
+                // GPT-4 Models
+                dropdown.addOption('gpt-4', 'GPT-4');
+                dropdown.addOption('gpt-4-turbo', 'GPT-4 Turbo');
+                dropdown.addOption('gpt-4-turbo-preview', 'GPT-4 Turbo Preview');
+                dropdown.addOption('gpt-4o', 'GPT-4o (Optimized)');
+                dropdown.addOption('gpt-4o-mini', 'GPT-4o Mini');
+
+                // o1 Models (Reasoning)
+                dropdown.addOption('o1', 'o1 (Advanced Reasoning)');
+                dropdown.addOption('o1-preview', 'o1 Preview');
+                dropdown.addOption('o1-mini', 'o1 Mini');
+
+                dropdown.setValue(this.plugin.settings.model)
+                    .onChange(async (value) => {
+                        this.plugin.settings.model = value;
+                        await this.plugin.saveSettings();
+                    });
+                return dropdown;
+            });
 
         containerEl.createEl('h3', {text: 'General Settings'});
 

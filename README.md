@@ -55,7 +55,10 @@ An Obsidian plugin that automatically generates tags from your notes and adds th
 ### AI Settings
 - **Use AI for tag refinement**: Enable OpenAI integration for better tag quality
 - **OpenAI API Key**: Your OpenAI API key (required for AI features)
-- **AI Model**: Choose between GPT-3.5 Turbo, GPT-4, or GPT-4 Turbo
+- **AI Model**: Choose from various models:
+  - GPT-3.5 Turbo
+  - GPT-4, GPT-4 Turbo, GPT-4o (Optimized)
+  - o1 models for advanced reasoning (o1, o1-preview, o1-mini)
 
 ### General Settings
 - **Maximum number of tags**: How many tags to generate per note (default: 10)
